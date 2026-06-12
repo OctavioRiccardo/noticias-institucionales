@@ -3,27 +3,10 @@
 use PHPUnit\Framework\TestCase;
 
 /**
- * Clase auxiliar (Stub) que simula una conexión mysqli.
- * Esto evita los problemas de propiedades de solo lectura (como $insert_id)
- * presentes al intentar mockear la clase interna mysqli de PHP directamente.
- */
-class TestMysqliConnection {
-    public int $insert_id = 0;
-    private array $prepareMap = [];
-
-    public function setPrepareMap(array $map) {
-        $this->prepareMap = $map;
-    }
-
-    public function prepare(string $query) {
-        return $this->prepareMap[$query] ?? null;
-    }
-}
-
-/**
  * Clase de pruebas unitarias para la lógica de autenticación en auth-logic.php.
  */
 class AuthLogicTest extends TestCase {
+
 
     /**
      * Prueba la validación de campos vacíos en el registro.
@@ -102,5 +85,123 @@ class AuthLogicTest extends TestCase {
         $this->assertIsArray($resultado);
         $this->assertContains("Error: El email ya se encuentra registrado en el sistema.", $resultado);
     }
+
+    /**
+     * Prueba el inicio de sesión exitoso con credenciales correctas.
+     */
+    public function testIniciarSesionExitoso() {
+        // Limpiamos la sesión antes de la prueba
+        $_SESSION = [];
+
+        $hashedPassword = password_hash('secreto123', PASSWORD_DEFAULT);
+        $userData = [
+            'id' => 10,
+            'nombre' => 'Grace',
+            'apellido' => 'Ashcroft',
+            'email' => 'requiem9@gmail.com',
+            'password' => $hashedPassword,
+            'roles_ids' => '1,2'
+        ];
+
+        // 1. Mock de mysqli_result que retorna los datos del usuario
+        $resultMock = $this->createMock(mysqli_result::class);
+        $resultMock->method('fetch_assoc')->willReturn($userData);
+
+        // 2. Mock de mysqli_stmt
+        $stmtMock = $this->createMock(mysqli_stmt::class);
+        $stmtMock->method('execute')->willReturn(true);
+        $stmtMock->method('get_result')->willReturn($resultMock);
+
+        // 3. Stub de la conexión
+        $conn = new TestMysqliConnection();
+        $conn->setPrepareMap([
+            "SELECT u.*, GROUP_CONCAT(ur.rol_id) as roles_ids 
+                            FROM usuarios u 
+                            LEFT JOIN usuario_rol ur ON u.id = ur.usuario_id 
+                            WHERE u.email = ? 
+                            GROUP BY u.id" => $stmtMock
+        ]);
+
+        // Ejecutar inicio de sesión con contraseña correcta
+        $resultado = iniciarSesion($conn, 'requiem9@gmail.com', 'secreto123');
+
+        $this->assertTrue($resultado);
+        
+        // Verificar que las variables de sesión se establecieron correctamente
+        $this->assertSame(10, $_SESSION['usuario_id']);
+        $this->assertSame('Grace', $_SESSION['usuario_nombre']);
+        $this->assertSame('Ashcroft', $_SESSION['usuario_apellido']);
+        $this->assertSame('requiem9@gmail.com', $_SESSION['usuario_email']);
+        $this->assertSame(['1', '2'], $_SESSION['usuario_roles']);
+    }
+
+    /**
+     * Prueba el inicio de sesión fallido debido a contraseña incorrecta.
+     */
+    public function testIniciarSesionContrasenaIncorrecta() {
+        $_SESSION = [];
+
+        $hashedPassword = password_hash('secreto123', PASSWORD_DEFAULT);
+        $userData = [
+            'id' => 10,
+            'nombre' => 'Grace',
+            'apellido' => 'Ashcroft',
+            'email' => 'requiem9@gmail.com',
+            'password' => $hashedPassword,
+            'roles_ids' => '1,2'
+        ];
+
+        $resultMock = $this->createMock(mysqli_result::class);
+        $resultMock->method('fetch_assoc')->willReturn($userData);
+
+        $stmtMock = $this->createMock(mysqli_stmt::class);
+        $stmtMock->method('get_result')->willReturn($resultMock);
+
+        $conn = new TestMysqliConnection();
+        $conn->setPrepareMap([
+            "SELECT u.*, GROUP_CONCAT(ur.rol_id) as roles_ids 
+                            FROM usuarios u 
+                            LEFT JOIN usuario_rol ur ON u.id = ur.usuario_id 
+                            WHERE u.email = ? 
+                            GROUP BY u.id" => $stmtMock
+        ]);
+
+        // Intentar iniciar sesión con contraseña equivocada
+        $resultado = iniciarSesion($conn, 'requiem9@gmail.com', 'password_erronea');
+
+        $this->assertIsArray($resultado);
+        $this->assertContains("Credenciales incorrectas.", $resultado);
+        $this->assertEmpty($_SESSION);
+    }
+
+    /**
+     * Prueba el inicio de sesión cuando el correo electrónico no está registrado.
+     */
+    public function testIniciarSesionUsuarioNoEncontrado() {
+        $_SESSION = [];
+
+        // Retornará null indicando que el correo no existe en la base de datos
+        $resultMock = $this->createMock(mysqli_result::class);
+        $resultMock->method('fetch_assoc')->willReturn(null);
+
+        $stmtMock = $this->createMock(mysqli_stmt::class);
+        $stmtMock->method('get_result')->willReturn($resultMock);
+
+        $conn = new TestMysqliConnection();
+        $conn->setPrepareMap([
+            "SELECT u.*, GROUP_CONCAT(ur.rol_id) as roles_ids 
+                            FROM usuarios u 
+                            LEFT JOIN usuario_rol ur ON u.id = ur.usuario_id 
+                            WHERE u.email = ? 
+                            GROUP BY u.id" => $stmtMock
+        ]);
+
+        $resultado = iniciarSesion($conn, 'noexisto@gmail.com', 'cualquiera123');
+
+        $this->assertIsArray($resultado);
+        $this->assertContains("Credenciales incorrectas.", $resultado);
+        $this->assertEmpty($_SESSION);
+    }
 }
+
 

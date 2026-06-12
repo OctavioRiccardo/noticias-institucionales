@@ -94,4 +94,53 @@ class NoticiasLogicTest extends TestCase {
         $resultado = cambiarEstadoNoticia($conn, $idNoticia, 'Anulada', $idUsuarioLogueado);
         $this->assertTrue($resultado);
     }
+
+    /**
+     * Prueba la inserción de una noticia sin adjuntar imagen.
+     */
+    public function testInsertarNoticiaCompletaSinImagen() {
+        $stmtInsert = $this->createMock(mysqli_stmt::class);
+        $stmtInsert->method('execute')->willReturn(true);
+
+        $conn = new TestMysqliConnection();
+        $conn->setPrepareMap([
+            "INSERT INTO noticias (titulo, resumen, descripcion, imagen, estado, autor_id) VALUES (?, ?, ?, ?, ?, ?)" => $stmtInsert
+        ]);
+
+        $resultado = insertarNoticiaCompleta($conn, 'Mi Título', 'Mi Resumen', 'Mi Contenido de Noticia', null, 'Borrador', 10);
+        $this->assertTrue($resultado);
+    }
+
+    /**
+     * Prueba la actualización de una noticia manteniendo la imagen actual (sin subir nueva ni borrar).
+     */
+    public function testActualizarNoticiaManteniendoImagen() {
+        $stmtUpdate = $this->createMock(mysqli_stmt::class);
+        $stmtUpdate->method('execute')->willReturn(true);
+
+        $conn = new TestMysqliConnection();
+        $conn->setPrepareMap([
+            "UPDATE noticias SET titulo = ?, resumen = ?, descripcion = ?, estado = ? WHERE id = ?" => $stmtUpdate
+        ]);
+
+        $resultado = actualizarNoticiaCompleta($conn, 5, 'Título Editado', 'Resumen Editado', 'Contenido Editado', null, 'Borrador', '0');
+        $this->assertTrue($resultado);
+    }
+
+    /**
+     * Prueba la actualización de una noticia eliminando la imagen de portada existente.
+     */
+    public function testActualizarNoticiaEliminandoImagen() {
+        $stmtUpdate = $this->createMock(mysqli_stmt::class);
+        $stmtUpdate->method('execute')->willReturn(true);
+
+        $conn = new TestMysqliConnection();
+        $conn->setPrepareMap([
+            "UPDATE noticias SET titulo = ?, resumen = ?, descripcion = ?, imagen = NULL, estado = ? WHERE id = ?" => $stmtUpdate
+        ]);
+
+        $resultado = actualizarNoticiaCompleta($conn, 5, 'Título Editado', 'Resumen Editado', 'Contenido Editado', null, 'Borrador', '1');
+        $this->assertTrue($resultado);
+    }
 }
+
