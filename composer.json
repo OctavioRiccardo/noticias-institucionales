@@ -1,0 +1,15 @@
+{
+    "name": "octavioriccardo/noticias-institucionales",
+    "description": "Sistema de Gestion de Noticias - Portal UNSL",
+    "type": "project",
+    "require-dev": {
+        "phpunit/phpunit": "^11.0 || ^12.0 || ^13.0"
+    },
+    "autoload": {
+        "files": [
+            "src/helpers.php",
+            "src/auth-logic.php",
+            "src/noticias-logic.php"
+        ]
+    }
+}
