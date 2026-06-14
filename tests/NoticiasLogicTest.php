@@ -17,18 +17,19 @@ class NoticiasLogicTest extends TestCase {
         $idUsuarioLogueado = 10;
         $autorIdNoticia = 10; // Mismo ID de usuario (intenta auto-validarse)
 
-        // 1. Crear Mock del resultado de la base de datos
-        $resultMock = $this->createMock(mysqli_result::class);
+        // 1. Crear Stub del resultado de la base de datos
+        $resultMock = $this->createStub(mysqli_result::class);
         $resultMock->method('fetch_assoc')->willReturn(['autor_id' => $autorIdNoticia]);
 
-        // 2. Crear Mock de stmt para la consulta de autoría
-        $stmtAutor = $this->createMock(mysqli_stmt::class);
+        // 2. Crear Stub de stmt para la consulta de autoría
+        $stmtAutor = $this->createStub(mysqli_stmt::class);
         $stmtAutor->method('execute')->willReturn(true);
         $stmtAutor->method('get_result')->willReturn($resultMock);
 
         // 3. Crear Mock de la conexión mysqli
         $conn = $this->createMock(mysqli::class);
-        $conn->method('prepare')
+        $conn->expects($this->once())
+             ->method('prepare')
              ->with("SELECT autor_id FROM noticias WHERE id = ?")
              ->willReturn($stmtAutor);
 
@@ -46,15 +47,15 @@ class NoticiasLogicTest extends TestCase {
         $autorIdNoticia = 10; // Editor original (diferente usuario)
 
         // 1. Mock de consulta de autoría
-        $resultMock = $this->createMock(mysqli_result::class);
+        $resultMock = $this->createStub(mysqli_result::class);
         $resultMock->method('fetch_assoc')->willReturn(['autor_id' => $autorIdNoticia]);
 
-        $stmtAutor = $this->createMock(mysqli_stmt::class);
+        $stmtAutor = $this->createStub(mysqli_stmt::class);
         $stmtAutor->method('execute')->willReturn(true);
         $stmtAutor->method('get_result')->willReturn($resultMock);
 
         // 2. Mock de stmt para la actualización de estado (UPDATE)
-        $stmtUpdate = $this->createMock(mysqli_stmt::class);
+        $stmtUpdate = $this->createStub(mysqli_stmt::class);
         $stmtUpdate->method('execute')->willReturn(true);
 
         // 3. Mock de conexión
@@ -81,12 +82,13 @@ class NoticiasLogicTest extends TestCase {
         $idUsuarioLogueado = 10;
 
         // 1. Mock de stmt para el UPDATE
-        $stmtUpdate = $this->createMock(mysqli_stmt::class);
+        $stmtUpdate = $this->createStub(mysqli_stmt::class);
         $stmtUpdate->method('execute')->willReturn(true);
 
         // 2. Mock de conexión
         $conn = $this->createMock(mysqli::class);
-        $conn->method('prepare')
+        $conn->expects($this->once())
+             ->method('prepare')
              ->with("UPDATE noticias SET estado = ?, fecha_publicacion = IF(? = 'Publicada', NOW(), fecha_publicacion) WHERE id = ?")
              ->willReturn($stmtUpdate);
 
@@ -99,7 +101,7 @@ class NoticiasLogicTest extends TestCase {
      * Prueba la inserción de una noticia sin adjuntar imagen.
      */
     public function testInsertarNoticiaCompletaSinImagen() {
-        $stmtInsert = $this->createMock(mysqli_stmt::class);
+        $stmtInsert = $this->createStub(mysqli_stmt::class);
         $stmtInsert->method('execute')->willReturn(true);
 
         $conn = new TestMysqliConnection();
@@ -115,7 +117,7 @@ class NoticiasLogicTest extends TestCase {
      * Prueba la actualización de una noticia manteniendo la imagen actual (sin subir nueva ni borrar).
      */
     public function testActualizarNoticiaManteniendoImagen() {
-        $stmtUpdate = $this->createMock(mysqli_stmt::class);
+        $stmtUpdate = $this->createStub(mysqli_stmt::class);
         $stmtUpdate->method('execute')->willReturn(true);
 
         $conn = new TestMysqliConnection();
@@ -131,7 +133,7 @@ class NoticiasLogicTest extends TestCase {
      * Prueba la actualización de una noticia eliminando la imagen de portada existente.
      */
     public function testActualizarNoticiaEliminandoImagen() {
-        $stmtUpdate = $this->createMock(mysqli_stmt::class);
+        $stmtUpdate = $this->createStub(mysqli_stmt::class);
         $stmtUpdate->method('execute')->willReturn(true);
 
         $conn = new TestMysqliConnection();

@@ -45,12 +45,12 @@ class AuthLogicTest extends TestCase {
      * Prueba el registro exitoso simulando la base de datos con un Connection Stub y Mocks de Statement.
      */
     public function testRegistrarUsuarioExitoso() {
-        // 1. Crear Mock de mysqli_stmt para la inserción de usuario
-        $stmtUsuario = $this->createMock(mysqli_stmt::class);
+        // 1. Crear Stub de mysqli_stmt para la inserción de usuario
+        $stmtUsuario = $this->createStub(mysqli_stmt::class);
         $stmtUsuario->method('execute')->willReturn(true);
 
-        // 2. Crear Mock de mysqli_stmt para la inserción de roles
-        $stmtRol = $this->createMock(mysqli_stmt::class);
+        // 2. Crear Stub de mysqli_stmt para la inserción de roles
+        $stmtRol = $this->createStub(mysqli_stmt::class);
         $stmtRol->method('execute')->willReturn(true);
 
         // 3. Crear instancia del Connection Stub
@@ -70,8 +70,8 @@ class AuthLogicTest extends TestCase {
      * Prueba el registro fallido cuando el email ya existe en el sistema.
      */
     public function testRegistrarUsuarioEmailDuplicado() {
-        // 1. Crear Mock de mysqli_stmt que devuelve false al ejecutar (simula error de restricción UNIQUE)
-        $stmtUsuario = $this->createMock(mysqli_stmt::class);
+        // 1. Crear Stub de mysqli_stmt que devuelve false al ejecutar (simula error de restricción UNIQUE)
+        $stmtUsuario = $this->createStub(mysqli_stmt::class);
         $stmtUsuario->method('execute')->willReturn(false);
 
         // 2. Crear instancia del Connection Stub
@@ -103,12 +103,12 @@ class AuthLogicTest extends TestCase {
             'roles_ids' => '1,2'
         ];
 
-        // 1. Mock de mysqli_result que retorna los datos del usuario
-        $resultMock = $this->createMock(mysqli_result::class);
+        // 1. Stub de mysqli_result que retorna los datos del usuario
+        $resultMock = $this->createStub(mysqli_result::class);
         $resultMock->method('fetch_assoc')->willReturn($userData);
 
-        // 2. Mock de mysqli_stmt
-        $stmtMock = $this->createMock(mysqli_stmt::class);
+        // 2. Stub de mysqli_stmt
+        $stmtMock = $this->createStub(mysqli_stmt::class);
         $stmtMock->method('execute')->willReturn(true);
         $stmtMock->method('get_result')->willReturn($resultMock);
 
@@ -151,10 +151,10 @@ class AuthLogicTest extends TestCase {
             'roles_ids' => '1,2'
         ];
 
-        $resultMock = $this->createMock(mysqli_result::class);
+        $resultMock = $this->createStub(mysqli_result::class);
         $resultMock->method('fetch_assoc')->willReturn($userData);
 
-        $stmtMock = $this->createMock(mysqli_stmt::class);
+        $stmtMock = $this->createStub(mysqli_stmt::class);
         $stmtMock->method('get_result')->willReturn($resultMock);
 
         $conn = new TestMysqliConnection();
@@ -181,10 +181,10 @@ class AuthLogicTest extends TestCase {
         $_SESSION = [];
 
         // Retornará null indicando que el correo no existe en la base de datos
-        $resultMock = $this->createMock(mysqli_result::class);
+        $resultMock = $this->createStub(mysqli_result::class);
         $resultMock->method('fetch_assoc')->willReturn(null);
 
-        $stmtMock = $this->createMock(mysqli_stmt::class);
+        $stmtMock = $this->createStub(mysqli_stmt::class);
         $stmtMock->method('get_result')->willReturn($resultMock);
 
         $conn = new TestMysqliConnection();
