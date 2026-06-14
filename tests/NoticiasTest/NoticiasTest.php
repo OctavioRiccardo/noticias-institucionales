@@ -35,13 +35,13 @@ class NoticiasTest extends TestCase {
     // Prueba que funcione si publicamos una noticia con un título único (no duplicado)
     public function testInsertarNoticiaConTituloUnicoEnEstadoPublicadaExito() {
         // Simula que la consulta SELECT COUNT devuelva 0 (título no existe publicado)
-        $resultCheckMock = $this->createMock(mysqli_result::class);
-        $resultCheckMock->method('fetch_row')->willReturn([0]);
+        $resultMock = $this->createMock(mysqli_result::class);
+        $resultMock->method('fetch_row')->willReturn([0]);
 
         // Simula la sentencia de verificación
-        $stmtCheckMock = $this->createMock(mysqli_stmt::class);
-        $stmtCheckMock->method('execute')->willReturn(true);
-        $stmtCheckMock->method('get_result')->willReturn($resultCheckMock);
+        $stmtMock = $this->createMock(mysqli_stmt::class);
+        $stmtMock->method('execute')->willReturn(true);
+        $stmtMock->method('get_result')->willReturn($resultMock);
 
         // Simula la sentencia de inserción final
         $stmtInsertMock = $this->createMock(mysqli_stmt::class);
@@ -50,7 +50,7 @@ class NoticiasTest extends TestCase {
         // Crea la conexión ficticia y asocia ambas consultas
         $connStub = new TestMysqliConnection();
         $connStub->setPrepareMap([
-            "SELECT COUNT(*) FROM noticias WHERE titulo = ? AND estado = 'Publicada'" => $stmtCheckMock,
+            "SELECT COUNT(*) FROM noticias WHERE titulo = ? AND estado = 'Publicada'" => $stmtMock,
             "INSERT INTO noticias (titulo, resumen, descripcion, imagen, estado, autor_id) VALUES (?, ?, ?, ?, ?, ?)" => $stmtInsertMock
         ]);
 
