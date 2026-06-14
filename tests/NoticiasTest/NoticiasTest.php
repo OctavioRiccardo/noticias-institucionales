@@ -86,4 +86,44 @@ class NoticiasTest extends TestCase {
         // Debe retornar true indicando que se publicó exitosamente
         $this->assertTrue($resultado);
     }
+
+    // Prueba que la función insertarNoticiaCompleta guarde con éxito (retorne true) la noticia en la base de datos
+    public function testInsertarNoticiaCompletaExito() {
+        // Simula la sentencia de inserción y que su ejecución devuelva true
+        $stmtInsert = $this->createMock(mysqli_stmt::class);
+        $stmtInsert->method('execute')->willReturn(true);
+
+        // Crea la conexión ficticia asociando la consulta de inserción
+        $connStub = new TestMysqliConnection();
+        $connStub->setPrepareMap([
+            "INSERT INTO noticias (titulo, resumen, descripcion, imagen, estado, autor_id) VALUES (?, ?, ?, ?, ?, ?)" => $stmtInsert
+        ]);
+
+        // Ejecuta la inserción en la base de datos simulada
+        $resultado = insertarNoticiaCompleta($connStub, "Noticia de Prueba", "Breve resumen", "Cuerpo de la noticia", null, "Borrador", 10);
+
+        // Verifica que la función retorne true, indicando que se guardó correctamente
+        $this->assertTrue($resultado);
+    }
+
+    // Prueba que la función insertarNoticiaCompleta devuelva false si ocurre un error en la base de datos
+    public function testInsertarNoticiaCompletaFalla() {
+        // Simula la sentencia de inserción y que su ejecución devuelva false
+        $stmtInsert = $this->createMock(mysqli_stmt::class);
+        $stmtInsert->method('execute')->willReturn(false);
+
+        // Crea la conexión ficticia asociando la consulta de inserción
+        $connStub = new TestMysqliConnection();
+        $connStub->setPrepareMap([
+            "INSERT INTO noticias (titulo, resumen, descripcion, imagen, estado, autor_id) VALUES (?, ?, ?, ?, ?, ?)" => $stmtInsert
+        ]);
+
+        // Ejecuta la inserción en la base de datos simulada
+        $resultado = insertarNoticiaCompleta($connStub, "Noticia de Prueba", "Breve resumen", "Cuerpo de la noticia", null, "Borrador", 10);
+
+        // Verifica que la función retorne false, indicando que ocurrió un error
+        $this->assertFalse($resultado);
+    }
 }
+
+
