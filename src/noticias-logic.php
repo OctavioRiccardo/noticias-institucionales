@@ -53,6 +53,17 @@ function obtenerNoticiaPorId($conn, $id) {
  * @return bool True si se insertó con éxito, False de lo contrario.
  */
 function insertarNoticiaCompleta($conn, $titulo, $resumen, $contenido, $imagen_file, $estado, $autor_id) {
+    // REGLA DE NEGOCIO: No puede existir más de una noticia con el mismo título en estado Publicada
+    if ($estado === 'Publicada') {
+        $stmt_check = $conn->prepare("SELECT COUNT(*) FROM noticias WHERE titulo = ? AND estado = 'Publicada'");
+        $stmt_check->bind_param("s", $titulo);
+        $stmt_check->execute();
+        $res = $stmt_check->get_result()->fetch_row();
+        if ($res && $res[0] > 0) {
+            return false; // Ya existe una noticia publicada con ese mismo título
+        }
+    }
+
     $nombre_imagen = null;
     // Verificar si se subió un archivo y no contiene errores
     if (isset($imagen_file) && $imagen_file['error'] === 0) {
@@ -67,6 +78,7 @@ function insertarNoticiaCompleta($conn, $titulo, $resumen, $contenido, $imagen_f
     $stmt->bind_param("sssssi", $titulo, $resumen, $contenido, $nombre_imagen, $estado, $autor_id);
     return $stmt->execute();
 }
+
 
 /**
  * Obtiene los borradores creados por un editor específico.
@@ -155,6 +167,27 @@ function cambiarEstadoNoticia($conn, $id, $nuevo_estado, $usuario_id) {
         }
     }
 
+    // REGLA DE NEGOCIO: No puede existir más de una noticia con el mismo título en estado Publicada
+    if ($nuevo_estado === 'Publicada') {
+        // 1. Obtener el título de la noticia actual
+        $stmt_titulo = $conn->prepare("SELECT titulo FROM noticias WHERE id = ?");
+        $stmt_titulo->bind_param("i", $id);
+        $stmt_titulo->execute();
+        $noticia_actual = $stmt_titulo->get_result()->fetch_assoc();
+        
+        if ($noticia_actual) {
+            $titulo = $noticia_actual['titulo'];
+            // 2. Verificar si ya existe otra noticia con el mismo título en estado 'Publicada'
+            $stmt_check = $conn->prepare("SELECT COUNT(*) FROM noticias WHERE titulo = ? AND estado = 'Publicada' AND id != ?");
+            $stmt_check->bind_param("si", $titulo, $id);
+            $stmt_check->execute();
+            $res = $stmt_check->get_result()->fetch_row();
+            if ($res && $res[0] > 0) {
+                return false; // Ya existe otra noticia publicada con ese mismo título
+            }
+        }
+    }
+
     /*
      * EJECUCIÓN DEL CAMBIO DE ESTADO
      * Si supera la barrera de seguridad, procede con la actualización normal en la base de datos.
@@ -164,6 +197,7 @@ function cambiarEstadoNoticia($conn, $id, $nuevo_estado, $usuario_id) {
     $stmt->bind_param("ssi", $nuevo_estado, $nuevo_estado, $id);
     return $stmt->execute();
 }
+
 
 /**
  * Obtiene el historial reciente de las noticias creadas por un usuario.

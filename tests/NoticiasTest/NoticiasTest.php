@@ -1,74 +1,63 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 
-/**
- * Clase de pruebas unitarias para la lógica de noticias en noticias-logic.php.
- * 
- * Explicación general de Dobles de Prueba en PHPUnit:
- * 1. Mock/Stub de mysqli_stmt: Creamos un objeto simulado (doble) de la clase nativa
- *    mysqli_stmt para poder definir cómo responderá cuando la función ejecute sus métodos,
- *    sin necesidad de conectarse realmente al servidor MySQL.
- * 2. TestMysqliConnection: Es una clase "Stub" de conexión (definida en tests/bootstrap.php)
- *    que le pasamos a la función. Su trabajo es interceptar la consulta SQL de inserción
- *    y devolver nuestro mysqli_stmt simulado.
- */
+// Este atributo indica a PHPUnit 13 que permita el uso de createMock()
+// sin configurar expectativas obligatorias (como expects()), silenciando las advertencias.
+#[AllowMockObjectsWithoutExpectations]
 class NoticiasTest extends TestCase {
 
-    /**
-     * Prueba el comportamiento de la función insertarNoticiaCompleta al guardar
-     * una noticia que no incluye archivo de imagen adjunto.
-     */
-    public function testInsertarNoticiaCompletaSinImagen() {
-        
-      
-        // PASO 1: PREPARACIÓN (Arrange)
-       
-        // Datos de ejemplo para simular la noticia que el editor desea guardar
-        $titulo = "Estudiantes de la UNSL crean satélite educativo";
-        $resumen = "Un hito histórico para la Tecnicatura Web.";
-        $contenido = "El proyecto fue desarrollado utilizando microprocesadores avanzados y tecnología de vanguardia.";
-        $imagenFile = null; // No se sube ninguna imagen en esta prueba
-        $estado = "Borrador";
-        $autorId = 10;
+    // Prueba que falle si se quiere publicar una noticia con un título ya existente en estado Publicada
+    public function testInsertarNoticiaConTituloDuplicadoEnEstadoPublicadaFalla() {
+        // Simula que la consulta SELECT COUNT devuelva 1 (que el título ya existe publicado)
+        $resultMock = $this->createMock(mysqli_result::class);
+        $resultMock->method('fetch_row')->willReturn([1]);
 
+        // Simula la sentencia de verificación
+        $stmtCheckMock = $this->createMock(mysqli_stmt::class);
+        $stmtCheckMock->method('execute')->willReturn(true);
+        $stmtCheckMock->method('get_result')->willReturn($resultMock);
 
-        // PASO 2: CREACIÓN DE MOCKS / STUBS (Dobles)
-        // A. Creamos un "Mock" (objeto simulado) de la clase mysqli_stmt
-        // Este objeto reemplaza a la sentencia preparada real de MySQL
-        $stmtMock = $this->createMock(mysqli_stmt::class);
-
-        // B. Configuramos el comportamiento del Mock:
-        // Le indicamos que cuando se llame a su método 'execute()',
-        // retorne inmediatamente true (simulando que la inserción en la BD fue exitosa).
-        $stmtMock->method('execute')->willReturn(true);
-
-        // C. Creamos un "Stub" de nuestra conexión mysqli simulada (TestMysqliConnection)
-        // Esta clase está definida en el archivo bootstrap de pruebas.
+        // Crea la conexión ficticia y le asocia la consulta de verificación
         $connStub = new TestMysqliConnection();
-
-        // D. Configuramos el mapa de consultas de la conexión simulada:
-        // Le decimos que cuando prepare la consulta SQL exacta de inserción de noticias,
-        // nos devuelva el objeto $stmtMock que acabamos de configurar en el paso A y B.
         $connStub->setPrepareMap([
-            "INSERT INTO noticias (titulo, resumen, descripcion, imagen, estado, autor_id) VALUES (?, ?, ?, ?, ?, ?)" => $stmtMock
+            "SELECT COUNT(*) FROM noticias WHERE titulo = ? AND estado = 'Publicada'" => $stmtCheckMock
         ]);
 
-   
-        // PASO 3: EJECUCIÓN (Act)
-        // Llamamos a la función original que queremos testear, pasándole nuestra
-        // conexión simulada y los datos de prueba
-        $resultado = insertarNoticiaCompleta($connStub,$titulo,$resumen,$contenido,$imagenFile,$estado,$autorId);
+        // Ejecuta la inserción con estado Publicada
+        $resultado = insertarNoticiaCompleta($connStub, "Becas Estudiantiles 2026", "Resumen", "Contenido", null, "Publicada", 10);
 
-      
-        // PASO 4: ASERCIÓN (Assert)
-        // Verificamos que la función nos retorne true, confirmando que la lógica interna 
-        // procesó los parámetros e invocó execute() correctamente en nuestro statement simulado
-        $this->assertTrue($resultado,"La función insertarNoticiaCompleta debería retornar true si la base de datos confirma el éxito.");
+        // Verifica que retorne false debido al título duplicado
+        $this->assertFalse($resultado);
     }
 
+    // Prueba que funcione si publicamos una noticia con un título único (no duplicado)
+    public function testInsertarNoticiaConTituloUnicoEnEstadoPublicadaExito() {
+        // Simula que la consulta SELECT COUNT devuelva 0 (título no existe publicado)
+        $resultCheckMock = $this->createMock(mysqli_result::class);
+        $resultCheckMock->method('fetch_row')->willReturn([0]);
 
-    
+        // Simula la sentencia de verificación
+        $stmtCheckMock = $this->createMock(mysqli_stmt::class);
+        $stmtCheckMock->method('execute')->willReturn(true);
+        $stmtCheckMock->method('get_result')->willReturn($resultCheckMock);
+
+        // Simula la sentencia de inserción final
+        $stmtInsertMock = $this->createMock(mysqli_stmt::class);
+        $stmtInsertMock->method('execute')->willReturn(true);
+
+        // Crea la conexión ficticia y asocia ambas consultas
+        $connStub = new TestMysqliConnection();
+        $connStub->setPrepareMap([
+            "SELECT COUNT(*) FROM noticias WHERE titulo = ? AND estado = 'Publicada'" => $stmtCheckMock,
+            "INSERT INTO noticias (titulo, resumen, descripcion, imagen, estado, autor_id) VALUES (?, ?, ?, ?, ?, ?)" => $stmtInsertMock
+        ]);
+
+        // Ejecuta la inserción
+        $resultado = insertarNoticiaCompleta($connStub, "Becas Estudiantiles 2026 - Único", "Resumen", "Contenido", null, "Publicada", 10);
+
+        // Verifica que retorne true indicando éxito
+        $this->assertTrue($resultado);
+    }
 }
-
-
