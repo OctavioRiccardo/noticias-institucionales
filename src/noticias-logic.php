@@ -150,49 +150,43 @@ function obtenerNoticiasPendientes($conn) {
  * @return bool True si la operación se realizó con éxito, False si falló la validación de seguridad o la inserción en BD.
  */
 function cambiarEstadoNoticia($conn, $id, $nuevo_estado, $usuario_id) {
-    /*
-     * BLOQUEO DE SEGURIDAD EN SERVIDOR
-     * Se comprueba la autoría antes de permitir un cambio de estado propio de un validador.
-     * Si el nuevo estado es 'Publicada' o 'Para Corrección', consultamos quién es el dueño.
-     */
+    // COBERTURA CAJA BLANCA - BLOQUE 1 (Entrada y Decisión 1)
     if ($nuevo_estado === 'Publicada' || $nuevo_estado === 'Para Corrección') {
+        // COBERTURA CAJA BLANCA - BLOQUE 2 (Consulta Autor y Decisión 2)
         $stmt_autor = $conn->prepare("SELECT autor_id FROM noticias WHERE id = ?");
         $stmt_autor->bind_param("i", $id);
         $stmt_autor->execute();
         $resultado = $stmt_autor->get_result()->fetch_assoc();
         
         if ($resultado && $resultado['autor_id'] == $usuario_id) {
-            // Si el ID del autor coincide con el ID del usuario en sesión, se rechaza la operación.
+            // COBERTURA CAJA BLANCA - BLOQUE 3 (Retorno Auto-validación)
             return false; 
         }
     }
 
-    // REGLA DE NEGOCIO: No puede existir más de una noticia con el mismo título en estado Publicada
+    // COBERTURA CAJA BLANCA - BLOQUE 4 (Decisión 3)
     if ($nuevo_estado === 'Publicada') {
-        // 1. Obtener el título de la noticia actual
+        // COBERTURA CAJA BLANCA - BLOQUE 5 (Consulta Título y Decisión 4)
         $stmt_titulo = $conn->prepare("SELECT titulo FROM noticias WHERE id = ?");
         $stmt_titulo->bind_param("i", $id);
         $stmt_titulo->execute();
         $noticia_actual = $stmt_titulo->get_result()->fetch_assoc();
         
         if ($noticia_actual) {
+            // COBERTURA CAJA BLANCA - BLOQUE 6 (Consulta Duplicados y Decisión 5)
             $titulo = $noticia_actual['titulo'];
-            // 2. Verificar si ya existe otra noticia con el mismo título en estado 'Publicada'
             $stmt_check = $conn->prepare("SELECT COUNT(*) FROM noticias WHERE titulo = ? AND estado = 'Publicada' AND id != ?");
             $stmt_check->bind_param("si", $titulo, $id);
             $stmt_check->execute();
             $res = $stmt_check->get_result()->fetch_row();
             if ($res && $res[0] > 0) {
-                return false; // Ya existe otra noticia publicada con ese mismo título
+                // COBERTURA CAJA BLANCA - BLOQUE 7 (Retorno Título Duplicado)
+                return false; 
             }
         }
     }
 
-    /*
-     * EJECUCIÓN DEL CAMBIO DE ESTADO
-     * Si supera la barrera de seguridad, procede con la actualización normal en la base de datos.
-     * Si el nuevo estado es 'Publicada', establecemos la fecha de publicación con NOW().
-     */
+    // COBERTURA CAJA BLANCA - BLOQUE 8 (UPDATE y Retorno de Éxito)
     $stmt = $conn->prepare("UPDATE noticias SET estado = ?, fecha_publicacion = IF(? = 'Publicada', NOW(), fecha_publicacion) WHERE id = ?");
     $stmt->bind_param("ssi", $nuevo_estado, $nuevo_estado, $id);
     return $stmt->execute();
